@@ -1,0 +1,4 @@
+#!/bin/bash
+# Sekiro mit In-Game-Overlay (Kill/Death-Counter via SekiroImGui d3dcompiler_43.dll)
+# Overlay-Toggle: in-game über Mod-Menü (Standard-Hotkey prüfen: INSERT/TAB)
+exec "$@"

@@ -1,0 +1,55 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "spacing": 4,
+
+  "modules-left": ["hyprland/workspaces"],
+  "modules-center": ["custom/notch"],
+  "modules-right": ["custom/notify", "clock", "tray", "pulseaudio", "network"],
+
+  "hyprland/workspaces": {
+    "format": "{id}",
+    "persistent-workspaces": { "*": [1, 2, 3, 4, 5] },
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({workspace=\"m+1\"})'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({workspace=\"m-1\"})'"
+  },
+
+  "clock": {
+    "format": "{:%H:%M  ·  %a %d.%m.}",
+    "tooltip-format": "<tt>{calendar}</tt>",
+    "interval": 1
+  },
+
+  "custom/notch": {
+    "format": "󰕾   󰑎   󰊠",
+    "tooltip": false,
+    "on-click": "LD_PRELOAD=/usr/lib/libgtk4-layer-shell.so ~/.local/bin/quick-panel",
+    "on-click-right": "pavucontrol"
+  },
+
+  "custom/notify": {
+    "format": "󰂚",
+    "tooltip": false,
+    "on-click": "~/.local/bin/notification-center"
+  },
+
+  "tray": {
+    "spacing": 12
+  },
+
+  "pulseaudio": {
+    "format": "VOL {volume}%",
+    "format-muted": "VOL stumm",
+    "scroll-step": 5,
+    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "on-click-right": "pavucontrol"
+  },
+
+  "network": {
+    "format-wifi": "WLAN {signalStrength}%",
+    "format-ethernet": "LAN",
+    "format-disconnected": "offline",
+    "tooltip-format": "{ifname}: {ipaddr}"
+  }
+}

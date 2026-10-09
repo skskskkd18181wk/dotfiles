@@ -1,0 +1,22 @@
+#!/bin/sh
+# Seducing Purple RGB – persistente Hardware-Modes + OpenRGB-Server für Direct
+set -e
+
+# 1) Server für Direct-Geräte (GPU, Maus) hoch, falls nicht aktiv
+systemctl --user is-active --quiet openrgb.service || systemctl --user start openrgb.service
+sleep 1
+
+# 2) Corsair AIO + Lüfter/Strips: non-volatile (bleibt ohne Software)
+liquidctl --match 'H100i' set led color fixed 9A66FF --non-volatile >/dev/null 2>&1 || true
+liquidctl --match 'Node'  set sync color fixed 9A66FF --non-volatile >/dev/null 2>&1 || true
+liquidctl -m 'Node' set led1 color fixed 9A66FF --non-volatile >/dev/null 2>&1 || true
+liquidctl -m 'Node' set led2 color fixed 9A66FF --non-volatile >/dev/null 2>&1 || true
+
+# 3) RAM: Hardware-Color-Wave (persistent im Stick), MB: Static
+openrgb -d 0,1,2,3 -m "Color Wave" -c "9A66FF,B794FF" -s 40 >/dev/null 2>&1 || true
+openrgb -d 4 -m Static -c 9A66FF >/dev/null 2>&1 || true
+
+# 4) RAM+GPU+Maus zusätzlich Direct über Server (falls Wave nicht greift)
+openrgb -d 0,1,2,3,5,8 -m Direct -c "9A66FF,B794FF,2E1A5C" >/dev/null 2>&1 || true
+
+exit 0

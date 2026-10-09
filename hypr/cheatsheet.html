@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Cheat Sheet</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a122b;
+    color: #efeaff;
+    font-family: "Inter", "Segoe UI", sans-serif;
+    padding: 28px 32px;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(45deg, #9a66ff, #efeaff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .sub { color: #8b7fb8; font-size: 13px; margin-bottom: 22px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .card {
+    background: rgba(46, 26, 92, 0.45);
+    border: 1px solid rgba(154, 102, 255, 0.35);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .card h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #9a66ff;
+    margin-bottom: 12px;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 14px;
+  }
+  .row + .row { border-top: 1px solid rgba(154, 102, 255, 0.12); }
+  .desc { color: #cfc4ef; }
+  kbd {
+    background: #2e1a5c;
+    border: 1px solid #9a66ff;
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    color: #efeaff;
+    white-space: nowrap;
+  }
+  .foot { margin-top: 20px; text-align: center; color: #6b5f94; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>⌘ Keybind Cheat Sheet</h1>
+  <div class="sub">Hyprland · CachyOS — SUPER + Ä schließt dieses Fenster (Esc im Browser / SUPER+C)</div>
+  <div class="grid">
+    <div class="card">
+      <h2>Programme</h2>
+      <div class="row"><span class="desc">Terminal (ghostty)</span><kbd>SUPER + Q</kbd></div>
+      <div class="row"><span class="desc">Dateimanager (thunar)</span><kbd>SUPER + E</kbd></div>
+      <div class="row"><span class="desc">Launcher (walker)</span><kbd>SUPER + R</kbd></div>
+      <div class="row"><span class="desc">Browser (chromium)</span><kbd>SUPER + B</kbd></div>
+      <div class="row"><span class="desc">Editor (codium)</span><kbd>SUPER + ALT + E</kbd></div>
+      <div class="row"><span class="desc">Dieses Cheat-Sheet</span><kbd>SUPER + Ä</kbd></div>
+    </div>
+    <div class="card">
+      <h2>Fenster</h2>
+      <div class="row"><span class="desc">Schließen</span><kbd>SUPER + C</kbd></div>
+      <div class="row"><span class="desc">Vollbild</span><kbd>SUPER + F</kbd></div>
+      <div class="row"><span class="desc">Float an/aus</span><kbd>SUPER + V</kbd></div>
+      <div class="row"><span class="desc">Pseudo-Tile</span><kbd>SUPER + P</kbd></div>
+      <div class="row"><span class="desc">Split drehen</span><kbd>SUPER + J</kbd></div>
+      <div class="row"><span class="desc">Verschieben</span><kbd>SUPER + SHIFT + ←↑↓→</kbd></div>
+      <div class="row"><span class="desc">Fokus</span><kbd>SUPER + ←↑↓→</kbd></div>
+      <div class="row"><span class="desc">Ziehen / Resize</span><kbd>SUPER + Maus L/R</kbd></div>
+    </div>
+    <div class="card">
+      <h2>Workspaces</h2>
+      <div class="row"><span class="desc">Wechseln 1–0</span><kbd>SUPER + 1…0</kbd></div>
+      <div class="row"><span class="desc">Fenster mitnehmen</span><kbd>SUPER + SHIFT + 1…0</kbd></div>
+      <div class="row"><span class="desc">Scrollen</span><kbd>SUPER + Scroll</kbd></div>
+      <div class="row"><span class="desc">Scratchpad öffnen</span><kbd>SUPER + S</kbd></div>
+      <div class="row"><span class="desc">Fenster ins Scratchpad</span><kbd>SUPER + SHIFT + S</kbd></div>
+      <div class="row"><span class="desc">Fensterwechsler</span><kbd>ALT + TAB</kbd></div>
+    </div>
+    <div class="card">
+      <h2>System</h2>
+      <div class="row"><span class="desc">Sperren (hyprlock)</span><kbd>SUPER + L</kbd></div>
+      <div class="row"><span class="desc">Beenden</span><kbd>SUPER + M</kbd></div>
+      <div class="row"><span class="desc">Screenshot: Region</span><kbd>PRINT</kbd></div>
+      <div class="row"><span class="desc">Screenshot: Fenster</span><kbd>ALT + PRINT</kbd></div>
+      <div class="row"><span class="desc">Screenshot: Aktiv</span><kbd>SHIFT + PRINT</kbd></div>
+      <div class="row"><span class="desc">Zwischenablage</span><kbd>SUPER + ALT + V</kbd></div>
+      <div class="row"><span class="desc">Ausmelden (wlogout)</span><kbd>SUPER + X</kbd></div>
+      <div class="row"><span class="desc">Farbwähler</span><kbd>SUPER + ALT + C</kbd></div>
+      <div class="row"><span class="desc">cava Visualizer</span><kbd>SUPER + ALT + K</kbd></div>
+      <div class="row"><span class="desc">Wallpaper wechseln</span><kbd>SUPER + ALT + W</kbd></div>
+      <div class="row"><span class="desc">Wallpaper-Picker (Vorschau)</span><kbd>SUPER + ALT + P</kbd></div>
+      <div class="row"><span class="desc">Lautstärke</span><kbd>XF86 ↑ / ↓ / Mute</kbd></div>
+      <div class="row"><span class="desc">Medien</span><kbd>XF86 Play / Prev / Next</kbd></div>
+    </div>
+  </div>
+  <div class="foot">Erstellt für romans CachyOS-Setup · Datei: ~/.config/hypr/cheatsheet.html</div>
+</body>
+</html>

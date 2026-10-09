@@ -1,0 +1,27 @@
+#!/bin/bash
+# Installiert PS-Button-Mod (Native PS4 / PS5 Glyphs) für Sekiro
+# Usage: sekiro-ps-buttons-install /pfad/zu/mod.zip
+set -e
+GAME="/mnt/HDD/SteamLibrary/steamapps/common/Sekiro"
+ZIP="${1:?Usage: sekiro-ps-buttons-install <mod.zip>}"
+
+[ -f "$ZIP" ] || { echo "ZIP nicht gefunden: $ZIP"; exit 1; }
+[ -f "$GAME/dinput8.dll" ] || { echo "Mod Engine fehlt – zuerst installiert"; exit 1; }
+
+TMP=$(mktemp -d)
+unzip -q "$ZIP" -d "$TMP"
+
+# 'menu'-Ordner suchen (egal wo im ZIP)
+MENU=$(find "$TMP" -type d -name "menu" | head -1)
+if [ -z "$MENU" ]; then
+  echo "Kein menu/ Ordner im ZIP gefunden. Inhalt:"
+  find "$TMP" -maxdepth 3 -type d
+  exit 1
+fi
+
+mkdir -p "$GAME/mods"
+rm -rf "$GAME/mods/menu"
+cp -r "$MENU" "$GAME/mods/menu"
+echo "Installiert: $GAME/mods/menu ($(find "$GAME/mods/menu" -type f | wc -l) Dateien)"
+rm -rf "$TMP"
+echo "Fertig. Sekiro neustarten – Prompts sind jetzt PlayStation."

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Waybar toggle helpers: wifi / bluetooth
+
+case "${1:-}" in
+    wifi)
+        state=$(nmcli -t -f WIFI radio)
+        if [ "$state" = "enabled" ]; then
+            nmcli radio wifi off
+        else
+            nmcli radio wifi on
+        fi
+        ;;
+    bt)
+        state=$(bluetoothctl show 2>/dev/null | grep -oP 'Powered:\s+\K\S+')
+        if [ "$state" = "yes" ]; then
+            bluetoothctl power off
+        else
+            bluetoothctl power on
+        fi
+        ;;
+    *)
+        echo "usage: $0 {wifi|bt}"
+        ;;
+esac

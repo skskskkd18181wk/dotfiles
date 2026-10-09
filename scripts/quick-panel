@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+"""Notch-Quick-Settings – Ton · Bildschirm · Sonstiges.
+
+Klick auf die Notch in der Waybar öffnet/schließt dieses Panel (PID-Toggle).
+Läuft als LayerShell → bündig unter Waybar, Hyprland slidet es rein (slide top).
+Esc schließt.
+"""
+import json
+import os
+import signal
+import subprocess
+import sys
+from pathlib import Path
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("Gtk4LayerShell", "1.0")
+from gi.repository import Gdk, GLib, Gtk, Gtk4LayerShell
+
+PIDF = Path("/tmp/quick-panel.pid")
+SINK = "@DEFAULT_AUDIO_SINK@"
+SRC = "@DEFAULT_AUDIO_SOURCE@"
+WAYBAR_H = 50  # tatsächliche Layer-Höhe
+
+CSS = """
+window {
+  background: transparent;
+}
+.panel {
+  background-image: linear-gradient(160deg, #0f0b1c 0%, #1a122b 60%, #241840 100%);
+  border: 1px solid rgba(154,102,255,.35);
+  border-bottom: none;
+  border-radius: 0 0 18px 18px;
+  color: #efeaff;
+}
+headerbar {
+  background: rgba(154,102,255,.18);
+  border-bottom: 1px solid #9a66ff;
+  border-radius: 0 0 12px 12px;
+  min-height: 36px;
+}
+headerbar title label { font-weight: 700; font-size: 14px; }
+.sect {
+  background: rgba(26,18,43,.62);
+  border: 1px solid rgba(154,102,255,.35);
+  border-radius: 14px;
+  margin: 4px 2px;
+  padding: 10px 12px 12px 12px;
+}
+.sect > label { font-weight: 700; color: #c9b8ff; font-size: 13px; letter-spacing: 1px; }
+.hint { color: #9d8fc2; font-size: 11px; }
+.vlabel { color: #9a66ff; font-size: 13px; font-weight: bold; min-width: 44px; }
+button {
+  background: rgba(154,102,255,.22);
+  border: 1px solid rgba(154,102,255,.55);
+  border-radius: 9px;
+  color: #efeaff;
+  padding: 6px 12px;
+  font-weight: 600;
+}
+button:hover { background: rgba(154,102,255,.45); box-shadow: 0 0 10px rgba(154,102,255,.5); }
+button.suggested { background: #9a66ff; color: #1a122b; }
+button.suggested:hover { background: #b794ff; }
+scale trough { background: #2e1a5c; border-radius: 8px; min-height: 8px; }
+scale highlight { background: #9a66ff; border-radius: 8px; }
+scale slider {
+  background: #efeaff; border: 2px solid #9a66ff;
+  min-width: 16px; min-height: 16px; border-radius: 50%;
+  box-shadow: 0 0 8px rgba(154,102,255,.8);
+}
+dropdown { font-size: 12px; }
+"""
+
+
+def sh(cmd: str) -> str:
+    try:
+        return subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, timeout=6
+        ).stdout
+    except Exception:
+        return ""
+
+
+def wpctl_vol(target: str):
+    out = sh(f"wpctl get-volume {target}")
+    try:
+        val = float(out.split()[1]) * 100
+        return round(val), "[MUTED]" in out
+    except Exception:
+        return 0, False
+
+
+def running_pid():
+    try:
+        pid = int(PIDF.read_text().strip())
+        cmd = Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="ignore")
+        if "quick-panel" in cmd:
+            os.kill(pid, 0)
+            return pid
+    except Exception:
+        pass
+    return None
+
+
+class Panel(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="dev.roman.quick-panel")
+        self._syncing = False
+
+    def do_activate(self):
+        if self.props.active_window:
+            self.props.active_window.present()
+            return
+        self._build()
+
+    def _build(self):
+        win = Gtk.ApplicationWindow(application=self, title="Schnell-Einstellungen")
+        win.set_default_size(420, -1)
+
+        css = Gtk.CssProvider()
+        try:
+            css.load_from_string(CSS)
+        except AttributeError:
+            css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        # LayerShell: bündig unter Waybar, oben verankert, zentriert
+        Gtk4LayerShell.init_for_window(win)
+        Gtk4LayerShell.set_layer(win, Gtk4LayerShell.Layer.TOP)
+        Gtk4LayerShell.set_anchor(win, Gtk4LayerShell.Edge.TOP, True)
+        Gtk4LayerShell.set_anchor(win, Gtk4LayerShell.Edge.LEFT, True)
+        Gtk4LayerShell.set_anchor(win, Gtk4LayerShell.Edge.RIGHT, True)
+        Gtk4LayerShell.set_margin(win, Gtk4LayerShell.Edge.TOP, WAYBAR_H)
+        Gtk4LayerShell.set_exclusive_zone(win, -1)  # kein exklusiver Zone-Platz
+        Gtk4LayerShell.set_keyboard_mode(win, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
+        # Namespace für Hyprland layer-rule (slide top Animation)
+        Gtk4LayerShell.set_namespace(win, "quick-panel")
+
+        titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+        titles.append(Gtk.Label(label="◈  Schnell-Einstellungen"))
+        win.set_titlebar(Gtk.HeaderBar(title_widget=titles))
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        outer.add_css_class("panel")
+        outer.set_margin_top(0)
+        outer.set_margin_start(10)
+        outer.set_margin_end(10)
+        outer.set_margin_bottom(10)
+
+        outer.append(self._sect_ton())
+        outer.append(self._sect_bild())
+        outer.append(self._sect_misc())
+
+        win.set_child(outer)
+
+        key = Gtk.EventControllerKey()
+        key.connect(
+            "key-pressed",
+            lambda _c, k, _kc, _s: (win.close(), True)[1]
+            if k == Gdk.KEY_Escape
+            else False,
+        )
+        win.add_controller(key)
+        win.connect("destroy", lambda *_: self.quit())
+
+        self._tick()
+        GLib.timeout_add_seconds(1, self._tick)
+        win.present()
+
+    def _section(self, title: str):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.add_css_class("sect")
+        lab = Gtk.Label(label=title, xalign=0)
+        box.append(lab)
+        return box
+
+    def _row(self, *widgets):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        for w in widgets:
+            row.append(w)
+        return row
+
+    def _sect_ton(self):
+        s = self._section("SOUND")
+
+        self.vol_lbl = Gtk.Label(label="0%", xalign=1)
+        self.vol_lbl.add_css_class("vlabel")
+        self.vol_scale = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, 0, 100, 1
+        )
+        self.vol_scale.set_draw_value(False)
+        self.vol_scale.set_hexpand(True)
+        self.vol_scale.connect("value-changed", self._on_vol)
+        s.append(self._row(Gtk.Label(label="Lautstärke", xalign=0), self.vol_scale, self.vol_lbl))
+
+        self.mic_lbl = Gtk.Label(label="0%", xalign=1)
+        self.mic_lbl.add_css_class("vlabel")
+        self.mic_scale = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, 0, 100, 1
+        )
+        self.mic_scale.set_draw_value(False)
+        self.mic_scale.set_hexpand(True)
+        self.mic_scale.connect("value-changed", self._on_mic)
+        s.append(self._row(Gtk.Label(label="Mikrofon", xalign=0), self.mic_scale, self.mic_lbl))
+
+        self.mute_btn = Gtk.Button(label="Stumm")
+        self.mute_btn.connect("clicked", lambda *_: sh(f"wpctl set-mute {SINK} toggle"))
+        mix_btn = Gtk.Button(label="Mixer")
+        mix_btn.connect(
+            "clicked", lambda *_: subprocess.Popen(["pavucontrol"], start_new_session=True)
+        )
+        s.append(self._row(self.mute_btn, mix_btn))
+        return s
+
+    def _on_vol(self, scale):
+        if self._syncing:
+            return
+        v = int(scale.get_value())
+        subprocess.Popen(["wpctl", "set-volume", SINK, f"{v}%"])
+        self.vol_lbl.set_text(f"{v}%")
+
+    def _on_mic(self, scale):
+        if self._syncing:
+            return
+        v = int(scale.get_value())
+        subprocess.Popen(["wpctl", "set-volume", SRC, f"{v}%"])
+        self.mic_lbl.set_text(f"{v}%")
+
+    def _sect_bild(self):
+        s = self._section("BILDSCHIRM")
+        try:
+            mons = json.loads(sh("hyprctl monitors -j"))
+        except Exception:
+            mons = []
+        if not mons:
+            s.append(Gtk.Label(label="keine Monitore gefunden", xalign=0))
+            return s
+        for m in mons:
+            cur = (
+                f"{m['name']}  ·  {m['width']}×{m['height']}"
+                f" @{round(m['refreshRate'])}Hz"
+            )
+            s.append(Gtk.Label(label=cur, xalign=0))
+            modes = list(m.get("availableModes") or [])
+            if not modes:
+                continue
+            dd = Gtk.DropDown.new_from_strings(modes)
+            for i, md in enumerate(modes):
+                try:
+                    wh, r = md.split("@", 1)
+                    w, h = wh.split("x")
+                    if (
+                        int(w) == m["width"]
+                        and int(h) == m["height"]
+                        and abs(float(r) - m["refreshRate"]) < 1.5
+                    ):
+                        dd.set_selected(i)
+                        break
+                except Exception:
+                    pass
+            dd.connect("notify::selected", self._on_mode, m)
+            dd.set_hexpand(True)
+            s.append(dd)
+        return s
+
+    def _on_mode(self, dd, _pspec, mon):
+        if self._syncing:
+            return
+        modes = mon.get("availableModes") or []
+        idx = dd.get_selected()
+        if idx >= len(modes):
+            return
+        mode = modes[idx]
+        cmd = (
+            f'hyprctl keyword monitor '
+            f'"{mon["name"]},{mode},{mon["x"]}x{mon["y"]},{mon["scale"]}"'
+        )
+        sh(cmd)
+
+    def _sect_misc(self):
+        s = self._section("SONSTIGES")
+        bt = Gtk.Button(label="  Bluetooth")
+        bt.connect(
+            "clicked", lambda *_: subprocess.Popen(["blueman-manager"], start_new_session=True)
+        )
+        apps = Gtk.Button(label="  Alle Apps")
+        apps.connect(
+            "clicked", lambda *_: subprocess.Popen(["walker"], start_new_session=True)
+        )
+        s.append(self._row(bt, apps))
+        return s
+
+    def _tick(self):
+        if not hasattr(self, "vol_scale"):
+            return True
+        self._syncing = True
+        try:
+            v, muted = wpctl_vol(SINK)
+            if round(self.vol_scale.get_value()) != v:
+                self.vol_scale.set_value(v)
+            self.vol_lbl.set_text(f"{v}%")
+            self.mute_btn.set_label("Laut ✓" if not muted else "Stumm ✓")
+            mv, mm = wpctl_vol(SRC)
+            if round(self.mic_scale.get_value()) != mv:
+                self.mic_scale.set_value(mv)
+            self.mic_lbl.set_text(f"{mv}%")
+        finally:
+            self._syncing = False
+        return True
+
+
+def main():
+    pid = running_pid()
+    if pid:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        sys.exit(0)
+    PIDF.write_text(str(os.getpid()))
+    try:
+        Panel().run(sys.argv)
+    finally:
+        PIDF.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    main()

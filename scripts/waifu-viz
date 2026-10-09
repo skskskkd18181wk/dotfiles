@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Waifu-Beat-Visualizer – Face vibriert mit Bass, Blitze um sie herum."""
+import math, os, random, signal, subprocess, sys, threading, time
+from pathlib import Path
+import gi
+gi.require_version("Gtk", "4.0")
+from gi.repository import GLib, Gtk
+import cairo
+
+FIFO = "/tmp/cava-fifo"
+IMAGE = Path.home() / ".local/share/wallpapers/waifu-purple.png"
+PIDF = Path("/tmp/waifu-viz.pid")
+ACCENT = (0x9A/255, 0x66/255, 0xFF/255)
+
+bolts, flashes = [], []
+
+def running_pid():
+    try:
+        pid = int(PIDF.read_text().strip())
+        if "waifu-viz" in Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="ignore"):
+            os.kill(pid, 0)
+            return pid
+    except Exception:
+        pass
+    return None
+
+class CavaReader(threading.Thread):
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.bars = [0.0] * 16
+        self.bass = 0.0
+        self.level = 0.0
+        self.beat = False
+        self._prev = 0.0
+        self._run = True
+
+    def run(self):
+        while self._run:
+            try:
+                with open(FIFO) as f:
+                    while self._run:
+                        line = f.readline()
+                        if not line:
+                            break
+                        vals = []
+                        for t in line.replace(";", " ").split():
+                            try: vals.append(int(t) / 100.0)
+                            except: pass
+                        if not vals:
+                            continue
+                        n = len(vals)
+                        third = max(1, n // 3)
+                        self.bass = sum(vals[:third]) / third
+                        self.level = sum(vals) / n
+                        self.bars = (vals[:16] + [0.0]*16)[:16]
+                        self.beat = self.bass > 0.35 and self.bass - self._prev > 0.08
+                        self._prev = self.bass
+            except:
+                time.sleep(0.1)
+
+def spawn_bolt(cx, cy, angle, length, depth=0):
+    if depth > 3 or length < 8:
+        return
+    x, y = cx, cy
+    segs = [(x, y)]
+    steps = max(3, int(length / 12))
+    for _ in range(steps):
+        angle += random.uniform(-0.5, 0.5)
+        x += math.cos(angle) * (length / steps)
+        y += math.sin(angle) * (length / steps)
+        segs.append((x, y))
+    bolts.append({"segs": segs, "life": 1.0, "width": max(1.5, 3.0 - depth)})
+    if depth < 2 and random.random() < 0.6:
+        mid = len(segs) // 2
+        spawn_bolt(segs[mid][0], segs[mid][1], angle + random.choice([-0.9, 0.9]), length * 0.5, depth + 1)
+
+class VizWindow(Gtk.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title="waifu-viz")
+        self.set_default_size(320, 320)
+        self.cava = CavaReader()
+        self.cava.start()
+
+        self.surface = None
+        try:
+            from PIL import Image
+            img = Image.open(IMAGE).convert("RGBA")
+            # Zentrierter quadratischer Crop (Gesicht oben-mittig)
+            w, h = img.size
+            side = int(h * 0.7)  # 70% der Höhe
+            left = (w - side) // 2
+            top = int(h * 0.05)
+            img = img.crop((left, top, left + side, top + side))
+            img = img.resize((256, 256), Image.LANCZOS)
+            img.save("/tmp/waifu-viz-face.png")
+            self.surface = cairo.ImageSurface.create_from_png("/tmp/waifu-viz-face.png")
+        except Exception as e:
+            print(f"Bild: {e}", file=sys.stderr)
+
+        self._da = Gtk.DrawingArea()
+        self._da.set_draw_func(self._draw)
+        self.set_child(self._da)
+        GLib.timeout_add(16, self._tick)
+        self.connect("close-request", self._close)
+
+    def _close(self, *_):
+        self.cava._run = False
+        PIDF.unlink(missing_ok=True)
+        return False
+
+    def _tick(self):
+        self._da.queue_draw()
+        return True
+
+    def _draw(self, area, cr, w, h):
+        c = self.cava
+        cx, cy = w / 2, h / 2
+
+        # Hintergrund
+        cr.set_source_rgb(0x0A/255, 0x06/255, 0x14/255)
+        cr.paint()
+
+        # Beat → Blitze
+        if c.beat or c.bass > 0.45:
+            for _ in range(random.randint(5, 9)):
+                spawn_bolt(cx, cy, random.uniform(0, 2*math.pi), 60 + c.bass * 120)
+            flashes.append({"life": 0.8, "r": 30 + c.bass * 60})
+
+        # Blitze zeichnen
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        alive = []
+        for b in bolts:
+            b["life"] -= 0.07
+            if b["life"] <= 0:
+                continue
+            alive.append(b)
+            a = b["life"]
+            r = 0x9A/255 + (1 - 0x9A/255) * (1 - a)
+            g = 0x66/255 + (1 - 0x66/255) * (1 - a)
+            cr.set_source_rgba(r, g, 1, a * 0.9)
+            cr.set_line_width(b["width"] * (0.5 + a * 0.5))
+            segs = b["segs"]
+            cr.move_to(*segs[0])
+            for p in segs[1:]:
+                cr.line_to(*p)
+            cr.stroke()
+            # Glow
+            cr.set_line_width(b["width"] * 4 * a)
+            cr.set_source_rgba(r, g, 1, a * 0.12)
+            cr.move_to(*segs[0])
+            for p in segs[1:]:
+                cr.line_to(*p)
+            cr.stroke()
+        bolts[:] = alive
+
+        # Flash
+        alive_f = []
+        for f in flashes:
+            f["life"] -= 0.1
+            if f["life"] <= 0:
+                continue
+            alive_f.append(f)
+            a = f["life"] * 0.3
+            grad = cairo.RadialGradient(cx, cy, 0, cx, cy, f["r"])
+            grad.add_color_stop_rgba(0, 1, 1, 1, a)
+            grad.add_color_stop_rgba(0.4, 0x9A/255, 0x66/255, 1, a * 0.5)
+            grad.add_color_stop_rgba(1, 0, 0, 0, 0)
+            cr.set_source(grad)
+            cr.paint()
+        flashes[:] = alive_f
+
+        # Face
+        if self.surface:
+            bw = self.surface.get_width()
+            bh = self.surface.get_height()
+            scale = 1.0 + c.bass * 0.22 + c.level * 0.06
+            shake = c.bass * 8
+            ox, oy = random.uniform(-shake, shake), random.uniform(-shake, shake)
+            cr.save()
+            cr.translate(cx + ox, cy + oy)
+            cr.scale(scale, scale)
+            cr.set_source_surface(self.surface, -bw/2, -bh/2)
+            cr.paint()
+            cr.restore()
+
+            # Glow ums Face
+            if c.bass > 0.15:
+                a = min(0.4, c.bass * 0.5)
+                dw = bw * scale
+                grad = cairo.RadialGradient(cx, cy, dw * 0.25, cx, cy, dw * 0.7)
+                grad.add_color_stop_rgba(0, 0x9A/255, 0x66/255, 1, a)
+                grad.add_color_stop_rgba(1, 0, 0, 0, 0)
+                cr.set_source(grad)
+                cr.paint()
+
+        # Beat-Ring
+        if c.bass > 0.1:
+            cr.set_source_rgba(*ACCENT, max(0, 0.5 - c.bass * 0.3))
+            cr.set_line_width(2)
+            cr.arc(cx, cy, 100 + c.bass * 60, 0, 2 * math.pi)
+            cr.stroke()
+
+        # Bass-Bar
+        bar_w = int(c.bass * w * 0.7)
+        cr.set_source_rgba(*ACCENT, 0.6)
+        cr.rectangle((w - bar_w) / 2, h - 4, bar_w, 2)
+        cr.fill()
+        return False
+
+def main():
+    pid = running_pid()
+    if pid:
+        try: os.kill(pid, signal.SIGTERM)
+        except: pass
+        return
+
+    if not Path(FIFO).exists():
+        os.mkfifo(FIFO, 0o666)
+    if not any("cava" in p for p in os.popen("pgrep -a cava").read().splitlines()):
+        subprocess.Popen(["cava", "-p", str(Path.home() / ".config/cava/fifo-viz.conf")],
+                         start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(0.3)
+
+    PIDF.write_text(str(os.getpid()))
+    app = Gtk.Application(application_id="dev.roman.waifu-viz")
+    app.connect("activate", lambda a: VizWindow(a).present())
+    try:
+        app.run(sys.argv)
+    finally:
+        PIDF.unlink(missing_ok=True)
+
+if __name__ == "__main__":
+    main()

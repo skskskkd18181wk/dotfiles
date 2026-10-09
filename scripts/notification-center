@@ -1,0 +1,318 @@
+#!/usr/bin/env python3
+"""Notification-Center – bündig unter der Waybar, Slide-Down, Verlauf aus dunst-Log."""
+import json
+import os
+import signal
+import sys
+import time
+from pathlib import Path
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+from gi.repository import Gdk, GLib, Gtk
+
+PIDF = Path("/tmp/notification-center.pid")
+HIST = Path.home() / ".local/share/dunst/history.jsonl"
+MAX = 40
+
+CSS = """
+window {
+  background: transparent;
+  color: #efeaff;
+}
+.panel {
+  background: rgba(14, 9, 28, 0.92);
+  border: 1px solid rgba(154, 102, 255, 0.45);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+}
+header {
+  background: rgba(26, 18, 43, 0.9);
+  border-bottom: 1px solid rgba(154, 102, 255, 0.35);
+  border-radius: 0 0 14px 14px;
+  padding: 12px 16px;
+}
+header .title { font-weight: 700; font-size: 14px; letter-spacing: 0.5px; }
+header .sub { color: #9d8fc2; font-size: 11px; }
+button.clear {
+  background: rgba(154, 102, 255, 0.2);
+  border: 1px solid rgba(154, 102, 255, 0.5);
+  border-radius: 8px;
+  color: #efeaff;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+button.clear:hover { background: rgba(154, 102, 255, 0.45); }
+scroll { background: transparent; }
+scrollbar { background: transparent; min-width: 0; }
+scrollbar slider { background: #9a66ff; border-radius: 6px; min-width: 6px; }
+.card {
+  background: rgba(36, 24, 64, 0.65);
+  border: 1px solid rgba(154, 102, 255, 0.22);
+  border-radius: 12px;
+  margin: 6px 12px;
+  padding: 10px 12px;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.card:hover {
+  background: rgba(46, 26, 92, 0.85);
+  border-color: rgba(154, 102, 255, 0.65);
+}
+.card.critical { border-left: 3px solid #ff6b81; }
+.card.normal   { border-left: 3px solid #9a66ff; }
+.card.low      { border-left: 3px solid #5c4f82; }
+.card .app { color: #c9b8ff; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+.card .summary { font-size: 13px; font-weight: 700; margin-top: 2px; }
+.card .body { color: #cfc6e8; font-size: 12px; margin-top: 2px; }
+.card .time { color: #9d8fc2; font-size: 10px; margin-top: 4px; }
+.card button.x {
+  background: transparent; border: none; color: #9d8fc2;
+  font-size: 14px; padding: 0 4px;
+}
+.card button.x:hover { color: #ff6b81; }
+.empty { color: #9d8fc2; font-size: 13px; padding: 40px 20px; }
+.heart { font-size: 18px; }
+"""
+
+
+def running_pid():
+    try:
+        pid = int(PIDF.read_text().strip())
+        cmd = Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="ignore")
+        if "notification-center" in cmd:
+            os.kill(pid, 0)
+            return pid
+    except Exception:
+        pass
+    return None
+
+
+def load_hist():
+    if not HIST.is_file():
+        return []
+    out = []
+    try:
+        for line in HIST.read_text().splitlines():
+            line = line.strip()
+            if line:
+                out.append(json.loads(line))
+    except Exception:
+        pass
+    out.reverse()
+    return out[:MAX]
+
+
+def rewrite_hist(keep):
+    try:
+        HIST.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in keep) + ("\n" if keep else ""))
+    except Exception:
+        pass
+
+
+def rel_time(ts):
+    d = max(0, time.time() - ts)
+    if d < 60:
+        return "gerade eben"
+    if d < 3600:
+        return f"vor {int(d // 60)} Min"
+    if d < 86400:
+        return f"vor {int(d // 3600)} Std"
+    return f"vor {int(d // 86400)} T"
+
+
+class Center(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="dev.roman.notification-center")
+        self.hist = load_hist()
+
+    def do_activate(self):
+        if self.props.active_window:
+            self.props.active_window.present()
+            return
+        self._build()
+
+    def _build(self):
+        win = Gtk.ApplicationWindow(application=self, title="Notification-Center")
+        win.set_default_size(400, 200)
+        win.set_decorated(False)
+
+        css = Gtk.CssProvider()
+        try:
+            css.load_from_string(CSS)
+        except AttributeError:
+            css.load_from_data(CSS.encode())
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        outer.add_css_class("panel")
+        outer.set_size_request(400, -1)
+        outer.set_hexpand(True)
+
+        # Header
+        hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        hdr.add_css_class("header")
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+        t = Gtk.Label(label="◈  Benachrichtigungen", xalign=0)
+        t.add_css_class("title")
+        self.sub = Gtk.Label(label=f"{len(self.hist)} Einträge", xalign=0)
+        self.sub.add_css_class("sub")
+        col.append(t)
+        col.append(self.sub)
+        col.set_hexpand(True)
+        hdr.append(col)
+        clear = Gtk.Button(label="Alles löschen")
+        clear.add_css_class("clear")
+        clear.connect("clicked", self._clear_all)
+        hdr.append(clear)
+        outer.append(hdr)
+
+        # Liste
+        self.listbox = Gtk.ListBox()
+        self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.listbox.add_css_class("list")
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_vexpand(True)
+        scroll.set_min_content_height(80)
+        scroll.set_max_content_height(520)
+        scroll.set_child(self.listbox)
+        outer.append(scroll)
+
+        win.set_child(outer)
+        self._outer = outer
+
+        key = Gtk.EventControllerKey()
+        key.connect(
+            "key-pressed",
+            lambda _c, k, _kc, _s: (self._animate_close(win), True)[1]
+            if k == Gdk.KEY_Escape
+            else False,
+        )
+        win.add_controller(key)
+        win.connect("destroy", lambda *_: self.quit())
+
+        self._fill()
+        self._resize(win)
+        win.present()
+
+        # Slide-Down per Revealer-Emulation: erst 0-Höhe, dann expandieren
+        # Einfacher: Hyprland-Anims + CSS-Transitions reichen; wir fade-in via opacity
+        win.set_opacity(0.0)
+        GLib.timeout_add(20, lambda: self._fade_in(win))
+
+    def _fade_in(self, win):
+        win.set_opacity(1.0)
+        return False
+
+    def _animate_close(self, win):
+        win.set_opacity(0.0)
+        GLib.timeout_add(120, lambda: (win.close(), False)[1])
+
+    def _resize(self, win):
+        n = len(self.hist)
+        header = 54
+        card = 108
+        pad = 20
+        h = header + (min(n, 5) * card if n else 100) + pad
+        h = max(140, min(h, 620))
+        win.set_default_size(400, h)
+
+    def _fill(self):
+        while (c := self.listbox.get_first_child()) is not None:
+            self.listbox.remove(c)
+        if not self.hist:
+            e = Gtk.Label(label="Keine Benachrichtigungen  ")
+            e.add_css_class("empty")
+            self.listbox.append(e)
+            return
+        for i, rec in enumerate(self.hist):
+            self.listbox.append(self._card(i, rec))
+
+    def _card(self, idx, rec):
+        urg = (rec.get("urgency") or "normal").lower()
+        if urg not in ("critical", "normal", "low"):
+            urg = "normal"
+        card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        card.add_css_class("card")
+        card.add_css_class(urg)
+
+        # Herz
+        heart_lbl = Gtk.Label(label="❤")
+        heart_lbl.add_css_class("heart")
+        if urg == "critical":
+            heart_lbl.set_css_name("label")
+            heart_lbl.set_markup('<span foreground="#ff6b81">❤</span>')
+        elif urg == "low":
+            heart_lbl.set_markup('<span foreground="#5c4f82">❤</span>')
+        else:
+            heart_lbl.set_markup('<span foreground="#9a66ff">❤</span>')
+        card.append(heart_lbl)
+
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        col.set_hexpand(True)
+        app = rec.get("app") or "System"
+        summ = rec.get("summary") or "(ohne Titel)"
+        body = rec.get("body") or ""
+        ts = rec.get("ts", 0)
+        a = Gtk.Label(label=app.upper(), xalign=0)
+        a.add_css_class("app")
+        s = Gtk.Label(label=summ, xalign=0, ellipsize=3)
+        s.add_css_class("summary")
+        col.append(a)
+        col.append(s)
+        if body:
+            b = Gtk.Label(label=body, xalign=0, ellipsize=3, lines=2)
+            b.add_css_class("body")
+            col.append(b)
+        t = Gtk.Label(label=rel_time(ts), xalign=0)
+        t.add_css_class("time")
+        col.append(t)
+        card.append(col)
+
+        x = Gtk.Button(label="✕")
+        x.add_css_class("x")
+        x.connect("clicked", self._dismiss, idx)
+        card.append(x)
+        return card
+
+    def _dismiss(self, _btn, idx):
+        if 0 <= idx < len(self.hist):
+            removed = self.hist.pop(idx)
+            keep = [r for r in load_hist() if r.get("ts") != removed.get("ts")]
+            rewrite_hist(keep)
+            self.sub.set_label(f"{len(self.hist)} Einträge")
+            self._fill()
+            if win := self.props.active_window:
+                self._resize(win)
+
+    def _clear_all(self, *_):
+        self.hist = []
+        rewrite_hist([])
+        self.sub.set_label("0 Einträge")
+        self._fill()
+        if win := self.props.active_window:
+            self._resize(win)
+
+
+def main():
+    pid = running_pid()
+    if pid:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        sys.exit(0)
+    PIDF.write_text(str(os.getpid()))
+    try:
+        Center().run(sys.argv)
+    finally:
+        PIDF.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    main()

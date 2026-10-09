@@ -1,0 +1,61 @@
+/* Seducing Purple – GTK4/3 Farben */
+/* Palette: accent #9a66ff · soft #efeaff · deep #2e1a5c · dark #1a122b */
+
+@define-color destructive_bg_color #ff6b81;
+@define-color destructive_fg_color #1a122b;
+@define-color error_bg_color #ff6b81;
+@define-color error_fg_color #1a122b;
+
+@define-color accent_bg_color #9a66ff;
+@define-color accent_fg_color #1a122b;
+
+@define-color window_bg_color #1a122b;
+@define-color window_fg_color #efeaff;
+
+@define-color view_bg_color #1a122b;
+@define-color view_fg_color #efeaff;
+
+@define-color headerbar_bg_color #241840;
+@define-color headerbar_fg_color #efeaff;
+
+@define-color sidebar_bg_color #2e1a5c;
+@define-color sidebar_fg_color #efeaff;
+
+@define-color secondary_sidebar_bg_color #241840;
+@define-color secondary_sidebar_fg_color #efeaff;
+
+@define-color card_bg_color #2e1a5c;
+@define-color card_fg_color #efeaff;
+
+@define-color overview_bg_color #2e1a5c;
+@define-color overview_fg_color #efeaff;
+
+@define-color popover_bg_color #241840;
+@define-color popover_fg_color #efeaff;
+
+@define-color dialog_bg_color #1a122b;
+@define-color dialog_fg_color #efeaff;
+
+@define-color headerbar_backdrop_color @window_bg_color;
+@define-color sidebar_backdrop_color @window_bg_color;
+@define-color theme_unfocused_fg_color #9d8fc2;
+@define-color theme_unfocused_text_color #9d8fc2;
+@define-color theme_unfocused_bg_color @window_bg_color;
+@define-color theme_unfocused_base_color @window_bg_color;
+@define-color theme_unfocused_selected_bg_color #2e1a5c;
+@define-color theme_unfocused_selected_fg_color #efeaff;
+
+@define-color borders rgba(154, 102, 255, 0.25);
+@define-color dim_label_color #9d8fc2;
+@define-color success_bg_color #9a66ff;
+@define-color success_fg_color #1a122b;
+@define-color warning_bg_color #f0c674;
+@define-color warning_fg_color #1a122b;
+
+/* Link */
+@define-color link_color #b794ff;
+@define-color link_visited_color #9a66ff;
+
+/* Selection */
+@define-color theme_selected_bg_color #9a66ff;
+@define-color theme_selected_fg_color #1a122b;

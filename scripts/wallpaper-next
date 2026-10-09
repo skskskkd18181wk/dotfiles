@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Wallpaper-Switch: wählt zufällig ein anderes Bild und blendet per
+# awww mit langsamem, smooth Verlauf (wave) ein.
+# NSFW-Pool (nsfw/) hat letzte Priorität (~15% Chance).
+set -euo pipefail
+
+DIR="$HOME/.local/share/wallpapers"
+NSFW="$DIR/nsfw"
+CURRENT="$(awww query 2>/dev/null | sed -n 's/.*image: \(.*\)/\1/p' || true)"
+
+mapfile -t MAIN < <(find "$DIR" -maxdepth 1 -type f \
+    \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) -print | sort)
+mapfile -t ADULT < <(find "$NSFW" -maxdepth 1 -type f \
+    \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) -print 2>/dev/null | sort)
+
+# Gewichtung: SFW-Pool normal, NSFW-Pool selten (letzte Priorität)
+POOL=("${MAIN[@]:-}")
+if ((${#ADULT[@]})) && ((RANDOM % 100 < 15)); then
+    POOL=("${ADULT[@]}")
+fi
+
+CANDIDATES=()
+for f in "${POOL[@]}"; do
+    [[ -n "$f" && "$f" != "$CURRENT" ]] && CANDIDATES+=("$f")
+done
+((${#CANDIDATES[@]})) || CANDIDATES=("${POOL[@]}")
+
+NEXT="${CANDIDATES[RANDOM % ${#CANDIDATES[@]}]}"
+
+# Smooth Verlauf: wave mit niedrigem Step = langer, weicher Farbübergang
+awww img \
+    --transition-type wave \
+    --transition-duration 3 \
+    --transition-step 15 \
+    "$NEXT"

@@ -1,0 +1,40 @@
+[global]
+    monitor = 0
+    follow = mouse
+    width = (300, 400)
+    height = 300
+    origin = top-right
+    offset = (16, 48)
+    notification_limit = 5
+    progress_bar = true
+    transparency = 8
+    frame_width = 2
+    frame_color = "#9a66ff"
+    separator_color = frame
+    font = sans 10
+    corner_radius = 14
+    mouse_left_click = do_action, dismiss_current
+    mouse_middle_click = dismiss_all
+    mouse_right_click = dismiss_all
+
+[urgency_low]
+    background = "#1a122b"
+    foreground = "#efeaff"
+    timeout = 4
+    icon = /home/roman/.config/dunst/icons/heart-purple.png
+    script = /home/roman/.local/bin/dunst-sound
+
+[urgency_normal]
+    background = "#1a122b"
+    foreground = "#efeaff"
+    timeout = 8
+    icon = /home/roman/.config/dunst/icons/heart-purple.png
+    script = /home/roman/.local/bin/dunst-sound
+
+[urgency_critical]
+    background = "#1a122b"
+    foreground = "#efeaff"
+    frame_color = "#ff5c5c"
+    timeout = 0
+    icon = /home/roman/.config/dunst/icons/heart-pink.png
+    script = /home/roman/.local/bin/dunst-sound

@@ -1,0 +1,31 @@
+palette = "seductive"
+
+add_newline = true
+
+format = """
+$directory\
+$git_branch\
+$git_status\
+$character"""
+
+[palettes.seductive]
+accent = "#9a66ff"
+soft = "#efeaff"
+dim = "#9d8fc2"
+deep = "#5f3fd4"
+
+[directory]
+style = "bold accent"
+truncation_length = 3
+truncate_to_repo = false
+
+[git_branch]
+symbol = " "
+style = "accent"
+
+[git_status]
+style = "accent"
+
+[character]
+success_symbol = "[❯](bold accent)"
+error_symbol = "[❯](bold red)"

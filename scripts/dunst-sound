@@ -1,0 +1,19 @@
+#!/bin/sh
+# Ara-Ara-Notification-Sound + Verlaufs-Log fuer dunst
+python3 - <<'PY' 2>/dev/null
+import os, json, time, pathlib
+p = pathlib.Path.home() / ".local/share/dunst/history.jsonl"
+p.parent.mkdir(parents=True, exist_ok=True)
+rec = {
+    "ts": round(time.time(), 1),
+    "app": os.environ.get("DUNST_APP_NAME", ""),
+    "summary": os.environ.get("DUNST_SUMMARY", ""),
+    "body": os.environ.get("DUNST_BODY", ""),
+    "urgency": os.environ.get("DUNST_URGENCY", "normal"),
+    "icon": os.environ.get("DUNST_ICON_PATH", ""),
+}
+with p.open("a") as f:
+    f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+PY
+paplay --client-name=dunst --volume=60000 /home/roman/.local/sounds/ara-ara.ogg >/dev/null 2>&1 &
+exit 0
