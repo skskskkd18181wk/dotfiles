@@ -4,16 +4,6 @@
 
 Hyprland + CachyOS Dotfiles mit durchgehendem Purple-Theme.
 
-## Screenshots
-
-| Desktop | Waybar |
-|---------|--------|
-| ![Desktop](screenshots/01-desktop.png) | ![Waybar](screenshots/02-waybar.png) |
-
-| Quick-Panel | Notification |
-|-------------|--------------|
-| ![Quick Panel](screenshots/03-quick-panel.png) | ![Notification](screenshots/04-notification.png) |
-
 ## Features
 
 - 🎨 **Seducing Purple Theme** – GTK 3/4, Waybar, Dunst, Cava
@@ -61,10 +51,10 @@ Der Installer fragt nach:
 
 ## Disclaimer
 
-Dies ist ein persönliches Rice-Projekt in der **Beta-Phase**. 
+Dies ist ein persönliches Rice-Projekt in der **Beta-Phase**.
 
 - ⚠️ Kein Support garantiert
-- ⚠️ Kann auf anderen Systemen nicht funktionieren  
+- ⚠️ Kann auf anderen Systemen nicht funktionieren
 - ⚠️ Änderungen ohne Vorwarnung
 - ✅ PRs und Issues willkommen
 
