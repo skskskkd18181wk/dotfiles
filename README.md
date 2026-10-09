@@ -1,46 +1,75 @@
-# Seducing Purple – Dotfiles
+# 🦄 Seducing Purple – Dotfiles
 
-Hyprland + CachyOS Dotfiles mit purple Theme.
+> ⚠️ **BETA** – Dieses Projekt befindet sich in aktiver Entwicklung. Es kann Bugs geben und sich jederzeit ändern. Keine Garantie auf Kompatibilität mit anderen Systemen.
+
+Hyprland + CachyOS Dotfiles mit durchgehendem Purple-Theme.
+
+## Screenshots
+
+| Desktop | Waybar |
+|---------|--------|
+| ![Desktop](screenshots/01-desktop.png) | ![Waybar](screenshots/02-waybar.png) |
+
+| Quick-Panel | Notification |
+|-------------|--------------|
+| ![Quick Panel](screenshots/03-quick-panel.png) | ![Notification](screenshots/04-notification.png) |
+
+## Features
+
+- 🎨 **Seducing Purple Theme** – GTK 3/4, Waybar, Dunst, Cava
+- 🔊 **Ara-Ara Notifications** – Eigener Notification-Sound
+- 🖼️ **Wallpaper-System** – Auto-Rotation + Picker
+- 🎵 **Cava Visualizer** – Purple-Gradient + Waifu-Beat-Visualizer
+- ⚡ **Quick-Panel** – Sound, Display, Bluetooth
+- 🐟 **Fish Shell** – Mit Starship Prompt
 
 ## Was drin ist
 
 | Config | Beschreibung |
 |--------|-------------|
-| `hypr/` | Hyprland Lua-Config (Windows, Keybinds, Autostart, etc.) |
+| `hypr/` | Hyprland Lua-Config |
 | `waybar/` | Waybar mit Notch + Quick-Panel |
-| `cava/` | Audio-Visualizer mit Purple-Gradient |
-| `dunst/` | Notifications mit Ara-Ara-Sound |
-| `fish/` | Fish-Shell Config |
-| `ghostty/` | Terminal Config |
-| `gtk-3.0/` `gtk-4.0/` | Seducing Purple GTK Theme |
-| `btop/` `mpv/` `MangoHud/` | System/Media Tools |
-| `pipewire/` | Audio EQ (Bass + Clarity) |
-| `scripts/` | Eigene Tools (RGB, GPU-OC, Visualizer, etc.) |
-| `starship.toml` | Prompt |
+| `cava/` | Audio-Visualizer |
+| `dunst/` | Notifications |
+| `fish/` | Fish-Shell |
+| `ghostty/` | Terminal |
+| `gtk-3.0/` `gtk-4.0/` | Purple GTK Theme |
+| `scripts/` | Eigene Tools |
+| `wallpapers.tar.gz` | 7 SFW Wallpapers (komprimiert) |
 
 ## Installation
 
 ```bash
-git clone https://github.com/ROMANCYBER/dotfiles.git ~/dotfiles
+git clone https://github.com/skskskkd18181wk/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 ```
 
-## Features
+Der Installer fragt nach:
+- **GPU** (NVIDIA/AMD/Intel)
+- **Distro** (CachyOS/Arch/Fedora/Debian)
+- **Timezone**
+- **Monitor/Auflösung**
+- **Shell** (fish/zsh/bash)
 
-- **Purple Theme**: Durchgehend #9a66ff Accent
-- **Waybar Notch**: Quick-Panel, Notification-Center, Theme-Picker
-- **RGB**: OpenRGB Seducing Purple Preset
-- **Audio**: Pipewire EQ + Dunst Ara-Ara Sound
-- **Wallpaper**: Auto-Rotation mit Picker
+## Requirements
 
-## Keybinds
+- Hyprland
+- CachyOS oder Arch-basiertes System
+- Pipewire
+- GTK 3/4
 
-| Key | Aktion |
-|-----|--------|
-| `Super+Alt+K` | Cava Visualizer |
-| `Super+Alt+B` | Waifu-Beat-Visualizer |
-| `Super+Alt+W` | Nächster Wallpaper |
-| `Super+Alt+P` | Wallpaper Picker |
-| `Super+Alt+R` | RGB Preset |
-| `Super+X` | Wlogout |
+## Disclaimer
+
+Dies ist ein persönliches Rice-Projekt in der **Beta-Phase**. 
+
+- ⚠️ Kein Support garantiert
+- ⚠️ Kann auf anderen Systemen nicht funktionieren  
+- ⚠️ Änderungen ohne Vorwarnung
+- ✅ PRs und Issues willkommen
+
+## Credits
+
+- Theme-Inspiration: [Seducing Purple](https://www.reddit.com/r/unixporn/)
+- Icons: [Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
+- Cursor: [Bibata-Modern-Classic](https://github.com/ful1e5/Bibata_Cursor)
