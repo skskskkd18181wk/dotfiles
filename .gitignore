@@ -13,16 +13,11 @@ Thumbs.db
 __pycache__/
 *.pyc
 
-# Secrets (nicht committen!)
+# Secrets
 *.key
 *.pem
 .env
 secrets/
-
-# Wallpaper (zu groß für Git - manuell kopieren)
-wallpapers/nsfw/
-wallpapers/*.jpg
-wallpapers/*.png
 
 # Build
 *.o
