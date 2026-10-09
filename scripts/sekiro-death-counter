@@ -1,5 +1,0 @@
-#!/bin/bash
-# Sekiro Death Counter starten (RiotNOR) – liest Death-Count aus Speicher
-# Vorraussetzung: Sekiro läuft bereits
-DIR="$(dirname "$(realpath "$0")")/sekiro-mods/death-counter"
-exec wine "$DIR/Death Counter.exe"

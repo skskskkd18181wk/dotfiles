@@ -30,11 +30,9 @@ cd ~/dotfiles
 
 - **Purple Theme**: Durchgehend #9a66ff Accent
 - **Waybar Notch**: Quick-Panel, Notification-Center, Theme-Picker
-- **GPU OC**: RTX 2080 Ti 330W OC (autostart)
 - **RGB**: OpenRGB Seducing Purple Preset
 - **Audio**: Pipewire EQ + Dunst Ara-Ara Sound
 - **Wallpaper**: Auto-Rotation mit Picker
-- **Sekiro**: Kill-Counter, PS5 Buttons, vkBasalt Cinematic
 
 ## Keybinds
 

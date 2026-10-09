@@ -275,12 +275,9 @@ elif [ "$GPU" = "amd" ]; then
     sed -i '/^__GLX_VENDOR_LIBRARY_NAME=/d' "$DOTFILES/hypr/env.lua" 2>/dev/null || true
     
     # AMD GPU-OC entfernen
-    rm -f "$HOME/.local/bin/gpu-oc"
-    echo "  ✓ gpu-oc entfernt (AMD)"
     
 elif [ "$GPU" = "intel" ]; then
     sed -i 's/^LIBVA_DRIVER_NAME=.*/LIBVA_DRIVER_NAME=iHD/' "$DOTFILES/hypr/env.lua" 2>/dev/null || true
-    rm -f "$HOME/.local/bin/gpu-oc"
 fi
 
 # ============================================
